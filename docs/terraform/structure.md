@@ -76,3 +76,15 @@ Requests a floating IP from the "campus" external network and attaches it to the
   - `floating_ip` wants the actual IP address string here, not a resource ID.
   - `depends_on = [openstack_networking_router_interface_v2.campus_router_interface]` — forces Terraform to wait until the router interface has fully attached the private subnet before attempting the association. See `docs/terraform/troubleshooting.md` for the actual error this prevents.
 - `output "server_public_ip"` — prints the server's public IP after `terraform apply` finishes, so you don't have to dig it out of the OpenStack dashboard by hand.
+
+## volume.tf
+
+Optional block storage. This is from the "maybe also" list in the workshop PDF, not a required part of the stack. It gives the server a separate disk on top of the 10GB that already comes from the flavor's own disk size.
+
+- `openstack_blockstorage_volume_v3.campus_web_server_volume` — creates the volume itself. A volume is just a virtual disk that lives on its own, separate from the server. It exists on its own timeline: I can create it, destroy the server, and the volume stays around with its data intact, as long as I don't destroy the volume too.
+  - `size = 5` — 5GB. Small on purpose, this is a lab exercise, not real storage need.
+  - `volume_type = "SSD"` — Cumulus offers three volume types: `HDD`, `SSD`, and `__DEFAULT__`. I picked SSD for speed, since HDD has no real benefit here and this is a tiny volume anyway.
+  - `availability_zone = "nova"` — the Cinder (block storage) availability zone. This is a separate namespace from Nova (compute) availability zones, so it doesn't have to match the server's `"Education"` zone. Cumulus only exposes one Cinder AZ, and it's called `"nova"`. See `docs/terraform/troubleshooting.md` for how I found this out.
+- `openstack_compute_volume_attach_v2.campus_web_server_volume_attach` — attaches the volume to the server.
+  - This is a separate resource from the volume itself on purpose. Creating a volume and attaching it are two different actions in OpenStack, so Terraform models them as two different resources. It also means I could detach and reattach the volume, or attach it to a different server, without having to destroy and recreate the volume.
+  - `instance_id` and `volume_id` just point at the two resources above by reference, so Terraform figures out the create order automatically (volume and instance both need to exist before the attach can happen).

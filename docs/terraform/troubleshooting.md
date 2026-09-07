@@ -41,3 +41,43 @@ resource "openstack_networking_floatingip_associate_v2" "campus_server_floating_
 ```
 
 `depends_on` forces an ordering dependency that isn't visible from the resource's own arguments. It tells Terraform "wait for this other resource to finish first," even though nothing here actually reads a value from it.
+
+## 3. Invalid resource type: openstack_blockstorage_volume_v2
+
+**Symptom:** `terraform apply` fails with:
+
+```
+Error: Invalid resource type
+The provider terraform-provider-openstack/openstack does not support resource type "openstack_blockstorage_volume_v2". Did you mean "openstack_blockstorage_volume_v3"?
+```
+
+**Cause:** I wrote `volume.tf` following an older workshop PDF slide that still showed `openstack_blockstorage_volume_v2`. That resource type was removed in provider version 3.0.0. The provider I'm actually using is 3.4.0, so the v2 name doesn't exist anymore. The v3 name (`openstack_blockstorage_volume_v3`) has existed alongside v2 for a while and is now the only option.
+
+**Fix:** rename the resource type from `openstack_blockstorage_volume_v2` to `openstack_blockstorage_volume_v3`, keep the local resource name and all arguments the same, and update every reference to it elsewhere (in my case, the `volume_id` argument in `openstack_compute_volume_attach_v2`).
+
+**Note:** I checked `openstack_compute_volume_attach_v2` too, since it also touches volumes. That one is a different resource and it's still correct as `v2` in provider 3.4.0. There's no `v3` version of it. I don't want to rename resource types just because a similar-sounding one changed, so I checked the provider changelog before touching it instead of guessing.
+
+## 4. Volume creation fails with "Availability zone 'Education' is invalid"
+
+**Symptom:** `terraform apply` fails while creating `openstack_blockstorage_volume_v3` with:
+
+```
+Error: Error creating openstack_blockstorage_volume_v3: ...
+"Availability zone 'Education' is invalid."
+```
+
+**Cause:** I assumed the volume needed to be in the same availability zone as the server, so I set `availability_zone = "Education"` to match `server.tf`. That's wrong. Compute (Nova) and block storage (Cinder) each have their own separate list of availability zones on OpenStack. They don't have to share the same names, and on Cumulus they don't. Cumulus only exposes one Cinder AZ, and it isn't called `"Education"`.
+
+**Fix:** check the actual valid Cinder AZ instead of guessing or reusing the Nova one:
+
+```bash
+openstack availability zone list --volume
+```
+
+On Cumulus this returns `nova`. So the fix is:
+
+```hcl
+availability_zone = "nova"
+```
+
+**Lesson:** don't assume a value carries over between resource types just because it worked elsewhere in the same stack. Compute AZs and storage AZs are different namespaces, and I should check each one directly with the CLI instead of assuming.
