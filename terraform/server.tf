@@ -11,7 +11,7 @@ resource "openstack_networking_port_v2" "campus_server_port" {
 resource "openstack_compute_instance_v2" "campus_web_server" {
   name = "campus-web-server"
 
-  image_name  = "Ubuntu server 26.04.1 autoupgrade"
+  image_name  = "Ubuntu server 24.04.3 autoupgrade"
   flavor_name = "c1-r1-d10"
   key_pair    = "mykey"
 
