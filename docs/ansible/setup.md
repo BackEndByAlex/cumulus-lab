@@ -208,3 +208,22 @@ Tip: source ~/.cumulus-secrets/project-openrc.sh first
 ```
 
 This is a deliberately small fix, not the final version. A proper OpenStack dynamic inventory plugin (querying the cloud API directly instead of going through Terraform's state) would remove the need for this script and for `inventory.ini` entirely, but that's a planned later optimization, not done yet.
+
+## 9. Turn off host key checking for this project only
+
+Cumulus lab instances get destroyed and recreated often during this workshop, and each new instance comes with a brand-new floating IP (see step 8). SSH, and by extension Ansible, remembers host keys per IP address in `~/.ssh/known_hosts`. Every time the floating IP changed, the very first Ansible run against it stopped to ask whether the new host's key should be trusted, which meant babysitting every single run instead of letting it complete on its own.
+
+`ansible/ansible.cfg`:
+
+```ini
+[defaults]
+host_key_checking = False
+```
+
+- `[defaults]` is the section Ansible's core settings live under.
+- `host_key_checking = False` tells Ansible not to check or prompt about SSH host keys at all when connecting to hosts.
+- This file sits inside `ansible/`, so it only applies when Ansible is run from that directory. It does not touch the regular `ssh` command, global `~/.ssh/config`, or anything outside of Ansible.
+
+This was a deliberate tradeoff for this specific lab, not a default I'd reach for elsewhere. These are throwaway instances with no real data on them, and the whole point of host key checking is to catch a server unexpectedly presenting a different identity than before, which is exactly what's supposed to happen here every time the lab environment gets rebuilt. Turning the check off entirely removes any value it was providing in this context.
+
+For anything longer-lived, production infrastructure, a persistent server, real user data, this is not the right fix. The safer middle ground there is `StrictHostKeyChecking=accept-new` (trust a host the first time it's seen, but still fail loudly if the key ever changes afterward), or managing known hosts properly through configuration management, not disabling the check outright.
