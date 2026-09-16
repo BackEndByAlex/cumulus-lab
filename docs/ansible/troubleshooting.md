@@ -29,3 +29,56 @@ ssh -i ~/.cumulus-secrets/mykey.pem ubuntu@<floating-ip>
 Type `yes` when prompted, then exit. That one connection writes an entry into `~/.ssh/known_hosts`, and every Ansible connection to that same IP after that works non-interactively.
 
 **Note:** this needs to happen again for any new server that gets a floating IP address it hasn't been reachable on before, for example after a `terraform destroy` / `terraform apply` cycle that reassigns the same IP to a brand-new VM (see `docs/troubleshooting.md#5-warning-remote-host-identification-has-changed-on-reconnect` for the related case where the IP is reused and the *old* host key needs to be removed instead).
+
+## 3. YAML parsing failed: "Mapping values are not allowed in this context"
+
+**Symptom:** running `ansible-playbook` fails immediately, before any task runs, with:
+
+```
+[ERROR]: YAML parsing failed: Mapping values are not allowed in this context.
+```
+
+**Cause:** I forgot the `- ` (dash + space) in front of a `name:` line somewhere in a playbook or tasks file. Plays in a playbook, tasks in a tasks file, and roles in a `roles:` list are all YAML *lists*, not plain key-value mappings. Every item in one of those lists needs a leading `- ` to mark it as a list entry. Without it, YAML reads the line as a plain mapping key sitting where a list item is expected, and the parser rejects the whole file rather than guessing what I meant.
+
+**Fix:** check that every play, every task, and every role-list entry starts with `- `:
+
+```yaml
+- name: Install nginx
+  apt:
+    name: nginx
+    state: present
+```
+
+not:
+
+```yaml
+  name: Install nginx
+  apt:
+    name: nginx
+    state: present
+```
+
+**Tip:** install `yamllint` and run it against a playbook before handing it to `ansible-playbook`, it catches this kind of structural mistake without needing to actually run anything against a server:
+
+```bash
+sudo apt install yamllint
+yamllint playbook.yml
+```
+
+## 4. Playbook succeeds but the deployed site is unreachable from outside
+
+**Symptom:** `ansible-playbook` finishes cleanly (`failed=0`), but `curl http://<floating-ip>:<port>` from outside Cumulus just hangs or times out.
+
+**Cause:** Ansible and Terraform operate at two separate layers, and a successful Ansible run only proves the app-level layer is correct. Ansible configured the server itself (for example, nginx is installed, running, and listening on the new port). Terraform controls the network-level firewall (the security group) that decides which ports are even allowed to reach the server from outside at all. If the new port was never added to the security group, traffic never gets past Cumulus's network layer, regardless of how correctly nginx is configured on the server.
+
+**Fix:** add the port to the `web_ports_open` list in `terraform/variables.tf`, then apply the change:
+
+```bash
+cd ~/cumulus-lab/terraform
+terraform plan
+terraform apply
+```
+
+`terraform plan` shows the new security group rule that will be added before committing to it. Once applied, the port is open at the network level and the site becomes reachable.
+
+**Lesson:** if a deployment "works" according to the tool that ran it but the result isn't reachable, check whether the problem is actually one layer down (or up) from the tool that just succeeded. Ansible succeeding says nothing about what Terraform's security group currently allows.

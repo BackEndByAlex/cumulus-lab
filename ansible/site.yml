@@ -1,0 +1,5 @@
+- name: Configure web server
+  hosts: webserver
+  become: true
+  roles:
+    - webserver

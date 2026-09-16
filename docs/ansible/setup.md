@@ -44,10 +44,10 @@ ansible --version
 
 ## 3. Move the project into the WSL native filesystem
 
-The project started out on the Windows side, under `/mnt/c/Users/User/Desktop/cumulus-lab`. I copied it into WSL's own native filesystem instead of working on it from the `/mnt/c/...` mount:
+The project started out on the Windows side, under `/mnt/c/Users/<username>/Desktop/cumulus-lab`. I copied it into WSL's own native filesystem instead of working on it from the `/mnt/c/...` mount:
 
 ```bash
-cp -r /mnt/c/Users/User/Desktop/cumulus-lab ~/cumulus-lab
+cp -r /mnt/c/Users/<username>/Desktop/cumulus-lab ~/cumulus-lab
 cd ~/cumulus-lab/terraform
 terraform init
 ```

@@ -91,3 +91,21 @@ availability_zone = "nova"
 **Fix:** delete the stray line so the file ends cleanly after the last resource block's closing `}`.
 
 **Lesson:** a parse error can come from something as small as one leftover character sitting outside any block. Worth scrolling to the very bottom of a `.tf` file after pasting edits into it.
+
+## 6. "Error creating OpenStack networking client: You must provide a password to authenticate"
+
+**Symptom:** `terraform plan` or `terraform apply` fails with:
+
+```
+Error: Error creating OpenStack networking client: You must provide a password to authenticate
+```
+
+**Cause:** this happened in a brand-new terminal session where I hadn't sourced the OpenStack credentials yet. Since moving the project into WSL, the credentials file lives outside the project at `~/.cumulus-secrets/project-openrc.sh` (see `docs/ansible/setup.md`), which makes it easy to forget the sourcing step entirely, it's no longer sitting right there in the project directory as a visual reminder. The `OS_*` environment variables it sets only exist in the exact shell session where I sourced it, so any new terminal starts out with none of them set (same root cause as troubleshooting entry 1 above, just the specific error message this now produces post-WSL-move).
+
+**Fix:** source the RC file from its relocated path before running any `terraform` command:
+
+```bash
+source ~/.cumulus-secrets/project-openrc.sh
+```
+
+It prompts for the Cumulus password. Do this once per new terminal session, it doesn't persist across shells or get remembered between commands.
