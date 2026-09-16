@@ -1,0 +1,24 @@
+---
+repos:
+  # Terraform formatting and validation, scoped to the terraform/ directory
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.109.1
+    hooks:
+      - id: terraform_fmt
+        files: ^terraform/
+      - id: terraform_validate
+        files: ^terraform/
+
+  # YAML style/syntax linting, scoped to the ansible/ directory
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+        files: ^ansible/
+
+  # Ansible-specific best-practice linting, scoped to the ansible/ directory
+  - repo: https://github.com/ansible/ansible-lint
+    rev: v26.8.0
+    hooks:
+      - id: ansible-lint
+        files: ^ansible/

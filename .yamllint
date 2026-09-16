@@ -1,0 +1,22 @@
+---
+extends: default
+
+rules:
+  # 80 chars is unrealistically strict for Ansible playbooks/vars; relax and just warn
+  line-length:
+    max: 120
+    level: warning
+  # Ansible commonly uses "---" without truthy concerns; keep default truthy checks otherwise
+  document-start:
+    present: true
+  # ansible-lint requires these exact overrides to consider a yamllint config compatible
+  # with its own YAML rule (see https://docs.ansible.com/projects/lint/rules/yaml/) —
+  # without them, ansible-lint refuses to run its own YAML checks/fix-mode against this repo.
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: false
+  braces:
+    max-spaces-inside: 1
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true

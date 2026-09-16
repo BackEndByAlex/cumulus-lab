@@ -82,3 +82,31 @@ terraform apply
 `terraform plan` shows the new security group rule that will be added before committing to it. Once applied, the port is open at the network level and the site becomes reachable.
 
 **Lesson:** if a deployment "works" according to the tool that ran it but the result isn't reachable, check whether the problem is actually one layer down (or up) from the tool that just succeeded. Ansible succeeding says nothing about what Terraform's security group currently allows.
+
+## 5. ansible-lint warns "Found incompatible custom yamllint configuration" and disables fix-mode
+
+**Symptom:** running `ansible-lint` (directly, or via `pre-commit run --all-files`) prints:
+
+```
+WARNING Found incompatible custom yamllint configuration ...
+```
+
+and its own YAML-related fix-mode gets disabled, even though a project-level `.yamllint` file already exists and mostly works fine with plain `yamllint`.
+
+**Cause:** `ansible-lint` ships its own YAML rule that normally delegates to `yamllint`, but only if the project's `.yamllint` config matches a specific set of settings it expects. My `.yamllint` extended the sensible `default` ruleset and relaxed `line-length`, but was still missing a few exact overrides `ansible-lint` requires before it will trust the config: `comments.min-spaces-from-content`, `comments-indentation`, `braces.max-spaces-inside`, and `octal-values`. Without those exact values present, `ansible-lint` treats the config as "incompatible" and quietly turns off the checks/fixes that depend on it, instead of failing loudly.
+
+**Fix:** add the missing overrides to `.yamllint`:
+
+```yaml
+rules:
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: false
+  braces:
+    max-spaces-inside: 1
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true
+```
+
+Once these exact values are present alongside the rest of the config, `ansible-lint` recognizes `.yamllint` as compatible and re-enables its YAML checks.

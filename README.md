@@ -63,7 +63,7 @@ The `.tf` files themselves don't contain comments. All the explanations live in 
 
 From this phase onward, the toolchain runs from a WSL2 Ubuntu control node instead of Windows directly, since Ansible needs a Linux (or macOS, or WSL) control node. Terraform moved along with it, so both tools now run from the same WSL shell, against a copy of this project living in WSL's native filesystem rather than the `/mnt/c/...` Windows mount.
 
-- [docs/ansible/setup.md](docs/ansible/setup.md) — installing Terraform and Ansible in WSL, moving the project and secrets, and the Ansible inventory
+- [docs/ansible/setup.md](docs/ansible/setup.md) — installing Terraform and Ansible in WSL, moving the project and secrets, the Ansible inventory/group_vars split, and the pre-commit lint hooks
 - [docs/ansible/troubleshooting.md](docs/ansible/troubleshooting.md) — WSL/Ansible-specific problems I ran into and how to fix them
 
 ### Prerequisites
@@ -71,6 +71,10 @@ From this phase onward, the toolchain runs from a WSL2 Ubuntu control node inste
 - WSL2 with an Ubuntu distro installed
 - Terraform and Ansible installed inside WSL (see `docs/ansible/setup.md`, both come from their own official apt sources, not the default Ubuntu repos)
 - `mykey.pem` and the Cumulus `openrc` file, both moved out of the project directory entirely into `~/.cumulus-secrets/` (see `docs/ansible/setup.md`) so they can never be committed to git by accident
+
+### Linting (pre-commit)
+
+`terraform fmt`/`terraform validate`, `yamllint`, and `ansible-lint` all run automatically on every `git commit` via `pre-commit` (see `docs/ansible/setup.md`, step 7, for setup and `docs/ansible/troubleshooting.md` for a yamllint/ansible-lint compatibility gotcha).
 
 ## Documentation
 

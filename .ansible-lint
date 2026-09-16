@@ -1,0 +1,9 @@
+---
+# Minimal config: keep ansible-lint's default rule set, just point it at the ansible/ directory
+# and skip the "yaml" rule family since yamllint already covers YAML style separately.
+exclude_paths:
+  - .terraform/
+  - terraform/
+
+skip_list:
+  - yaml

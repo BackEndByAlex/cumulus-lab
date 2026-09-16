@@ -1,6 +1,6 @@
 server {
-  listen {{ http_port }} default_server;
-  listen [::]:{{ http_port }} default_server;
+  listen {{ webserver_http_port }} default_server;
+  listen [::]:{{ webserver_http_port }} default_server;
 
   root /var/www/html;
   index index.html;

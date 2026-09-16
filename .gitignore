@@ -29,4 +29,17 @@ terraform.rc
 # Ignore any HCL files that are not part of the project
 .terraform.lock.hcl
 
+# Ansible inventory is environment-specific (real Cumulus IP) — kept local, not shared.
+# Note: this pattern already also matches ansible/inventory.ini since it has no leading slash.
 inventory.ini
+
+# Ansible retry files — generated automatically after a failed playbook run
+*.retry
+
+# Ansible Vault files — encrypted secrets, but still not meant to be committed as plaintext-adjacent files
+group_vars/**/vault.yml
+*.vault
+.vault_pass
+
+# Contains environment-specific values (ansible_user, ansible_ssh_private_key_file path) — same reasoning as inventory.ini
+ansible/group_vars/webserver.yml
