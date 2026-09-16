@@ -1,0 +1,3 @@
+---
+ansible_user: ubuntu
+ansible_ssh_common_args: '-F /home/sev3n/cumulus-lab/02-load-balanced/ansible/ssh.cfg'

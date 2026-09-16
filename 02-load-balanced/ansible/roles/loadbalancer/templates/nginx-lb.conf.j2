@@ -1,0 +1,16 @@
+upstream backend_servers {
+{% for backend in groups['backends'] %}
+  server {{ backend }}:8080;
+{% endfor %}
+}
+
+server {
+  listen {{ loadbalancer_http_port }} default_server;
+  listen [::]:{{ loadbalancer_http_port }} default_server;
+
+  server_name _;
+
+  location / {
+    proxy_pass http://backend_servers;
+  }
+}

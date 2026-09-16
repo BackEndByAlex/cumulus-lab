@@ -12,7 +12,7 @@ crash.log
 crash.*.log
 
 # Variable files — may contain secrets or environment-specific values.
-# Not used yet in this project, but ignored defensively.
+# Used by 02-load-balanced/terraform (terraform.tfvars holds the student's own public IP).
 *.tfvars
 *.tfvars.json
 
@@ -30,7 +30,8 @@ terraform.rc
 .terraform.lock.hcl
 
 # Ansible inventory is environment-specific (real Cumulus IP) — kept local, not shared.
-# Note: this pattern already also matches ansible/inventory.ini since it has no leading slash.
+# Note: this pattern has no leading slash, so it matches both
+# 01-single-server/ansible/inventory.ini and 02-load-balanced/ansible/inventory.ini.
 inventory.ini
 
 # Ansible retry files — generated automatically after a failed playbook run
@@ -42,4 +43,4 @@ group_vars/**/vault.yml
 .vault_pass
 
 # Contains environment-specific values (ansible_user, ansible_ssh_private_key_file path) — same reasoning as inventory.ini
-ansible/group_vars/webserver.yml
+01-single-server/ansible/group_vars/webserver.yml

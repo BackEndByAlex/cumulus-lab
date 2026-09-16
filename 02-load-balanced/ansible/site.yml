@@ -1,0 +1,12 @@
+---
+- name: Configure backend web servers
+  hosts: backends
+  become: true
+  roles:
+    - webserver
+
+- name: Configure load balancer
+  hosts: loadbalancer
+  become: true
+  roles:
+    - loadbalancer

@@ -1,24 +1,24 @@
 ---
 repos:
-  # Terraform formatting and validation, scoped to the terraform/ directory
+  # Terraform formatting and validation, scoped to both exercises' terraform/ directories
   - repo: https://github.com/antonbabenko/pre-commit-terraform
     rev: v1.109.1
     hooks:
       - id: terraform_fmt
-        files: ^terraform/
+        files: ^(01-single-server|02-load-balanced)/terraform/
       - id: terraform_validate
-        files: ^terraform/
+        files: ^(01-single-server|02-load-balanced)/terraform/
 
-  # YAML style/syntax linting, scoped to the ansible/ directory
+  # YAML style/syntax linting, scoped to both exercises' ansible/ directories
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.38.0
     hooks:
       - id: yamllint
-        files: ^ansible/
+        files: ^(01-single-server|02-load-balanced)/ansible/
 
-  # Ansible-specific best-practice linting, scoped to the ansible/ directory
+  # Ansible-specific best-practice linting, scoped to both exercises' ansible/ directories
   - repo: https://github.com/ansible/ansible-lint
     rev: v26.8.0
     hooks:
       - id: ansible-lint
-        files: ^ansible/
+        files: ^(01-single-server|02-load-balanced)/ansible/

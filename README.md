@@ -1,87 +1,68 @@
-# Cumulus Lab — Creating an SSH-Accessible Server on LNU's OpenStack Cloud
+# Cumulus Lab
 
-Cumulus is Linnaeus University's (LNU) OpenStack-based private cloud (IaaS). I can reach it at [cumulus.lnu.se](https://cumulus.lnu.se) through the web UI, the API, the `openstack` CLI, or Infrastructure-as-Code tools. Anything that runs Ubuntu can run on it.
+This is a lab project for the **2DV013** course at **Linnaeus University (LNU)**. It provisions and configures Ubuntu servers on Cumulus, LNU's OpenStack-based private cloud (IaaS), reachable at [cumulus.lnu.se](https://cumulus.lnu.se). The purpose is to practice Infrastructure as Code (Terraform) and configuration management (Ansible) against a real cloud, and to build a working reference for classmates that documents the real problems encountered along the way, since that's a gap the official course material doesn't cover.
 
-## What This Repo Covers
+## The Two Exercises
 
-This repo has three phases, all building on the same SSH-accessible Ubuntu server on Cumulus, just with different tools.
+This repo contains two separate exercises, each fully self-contained with its own Terraform and Ansible configuration.
 
-**Phase 1: Manual (openstack CLI).** I create the server by hand, one `openstack` command at a time, based on the LNU course slides (a 13-slide "Cumulus" lab presentation). This is the baseline, and it's still a valid reference if I want to understand what's happening under the hood.
+### `01-single-server` — one server, manually and then automated
 
-**Phase 2: Automated (Terraform).** I recreate the exact same infrastructure, network, router, security group, server, and floating IP, but through Terraform `.tf` files instead of manual commands. This is the LNU 2DV013 "Automated Provisioning" workshop. It's Infrastructure as Code: the same result, but defined declaratively and repeatable with `terraform apply` instead of retyping commands.
+The simplest possible setup: a single Ubuntu server with nginx, reachable over SSH and HTTP. Built three ways, in order:
 
-**Phase 3: Configuration (Ansible, from a WSL2 control node).** Ansible has no native Windows support, so this phase also moves the whole toolchain (Terraform included) onto a WSL2 Ubuntu control node. Once Terraform has provisioned the server, Ansible connects over SSH to configure it, instead of SSHing in by hand.
+1. **Manually**, one `openstack` CLI command at a time, based on the LNU course slides. This is the baseline and still a valid reference for understanding what's happening under the hood.
+2. **With Terraform**, recreating the exact same infrastructure (network, router, security group, server, floating IP) declaratively instead of by hand.
+3. **Configured with Ansible**, which installs and configures nginx over SSH once Terraform has provisioned the server.
 
-All three phases also document real troubleshooting I hit along the way, since that's a gap the official course material doesn't cover.
+### `02-load-balanced` — two backend servers behind a load balancer
 
-The goal is to give classmates a working reference that gets them from zero to a running, SSH-accessible Ubuntu server, manually or via Terraform, without hitting the same walls I did.
+A more realistic setup: two backend web servers on a private network (no public IP of their own) sitting behind an nginx load balancer, which is the only server with a public floating IP. Built with Terraform (network, security groups, ports, servers, floating IP) and configured with Ansible, which installs nginx on the backends and configures nginx as a reverse proxy on the load balancer. Ansible reaches the private backend servers by SSH-jumping through the load balancer (`ProxyJump`), since they have no direct path from outside Cumulus.
 
-## Phase 1: Manual (openstack CLI)
+This exercise now has full walkthrough docs alongside `01-single-server`, see [Documentation](#documentation) below.
 
-### Steps Overview
+## Tech Stack
 
-1. Create an SSH keypair
-2. Create a network, router, and subnet
-3. Create the server
-4. Open a security group for SSH
-5. Attach a floating IP
-6. Connect over SSH
+- **Terraform** — Infrastructure as Code, using the `terraform-provider-openstack/openstack` provider
+- **Ansible** — configuration management, connecting over SSH
+- **OpenStack / Cumulus** — the cloud platform both tools target
+- **WSL2 (Ubuntu)** — the control node both Terraform and Ansible run from; Ansible has no native Windows support, so the whole toolchain moved here from Windows/Git Bash partway through the project
 
-See [docs/commands.md](docs/commands.md) for the full working command reference.
+## Repo Structure
 
-### Prerequisites
-
-- The `openstack` CLI, installed via:
-  ```bash
-  pip install python-openstackclient
-  ```
-- An RC file or `clouds.yaml` downloaded from the Cumulus dashboard (Project → API Access → Download OpenStack RC File)
-
-### Environment Note
-
-I did this lab on Windows using Git Bash (MINGW64), not PowerShell or WSL. That matters, because one of the bugs I document is Windows-specific: a CRLF line-ending issue that corrupts SSH private keys generated by the `openstack` CLI. See [docs/troubleshooting.md](docs/troubleshooting.md#3-ssh-key-fails-with-error-in-libcrypto-unsupported-windows-specific) for details.
-
-## Phase 2: Automated (Terraform)
-
-This phase recreates the same infrastructure as Phase 1, network, router, security group, server, and floating IP, but entirely through Terraform `.tf` files in the `terraform/` directory. Instead of typing `openstack` commands one at a time, I describe the desired end state in HCL and let Terraform figure out how to get there with `terraform plan` and `terraform apply`.
-
-The `.tf` files themselves don't contain comments. All the explanations live in the docs below instead.
-
-- [docs/terraform/structure.md](docs/terraform/structure.md) — walkthrough of every `.tf` file and what each resource block does
-- [docs/terraform/commands.md](docs/terraform/commands.md) — the Terraform workflow commands, in order
-- [docs/terraform/troubleshooting.md](docs/terraform/troubleshooting.md) — problems I ran into building the Terraform stack and how to fix them
-
-### Prerequisites
-
-- Terraform CLI, installed via:
-  ```bash
-  winget install --id Hashicorp.Terraform -e
-  ```
-- The same Cumulus `openrc` file as Phase 1. The OpenStack Terraform provider reads its credentials from the `OS_*` environment variables set by sourcing that file, not from anything written in the `.tf` files. Credentials never go into version control.
-
-## Phase 3: Configuration (Ansible + WSL2)
-
-From this phase onward, the toolchain runs from a WSL2 Ubuntu control node instead of Windows directly, since Ansible needs a Linux (or macOS, or WSL) control node. Terraform moved along with it, so both tools now run from the same WSL shell, against a copy of this project living in WSL's native filesystem rather than the `/mnt/c/...` Windows mount.
-
-- [docs/ansible/setup.md](docs/ansible/setup.md) — installing Terraform and Ansible in WSL, moving the project and secrets, the Ansible inventory/group_vars split, and the pre-commit lint hooks
-- [docs/ansible/troubleshooting.md](docs/ansible/troubleshooting.md) — WSL/Ansible-specific problems I ran into and how to fix them
-
-### Prerequisites
-
-- WSL2 with an Ubuntu distro installed
-- Terraform and Ansible installed inside WSL (see `docs/ansible/setup.md`, both come from their own official apt sources, not the default Ubuntu repos)
-- `mykey.pem` and the Cumulus `openrc` file, both moved out of the project directory entirely into `~/.cumulus-secrets/` (see `docs/ansible/setup.md`) so they can never be committed to git by accident
-
-### Linting (pre-commit)
-
-`terraform fmt`/`terraform validate`, `yamllint`, and `ansible-lint` all run automatically on every `git commit` via `pre-commit` (see `docs/ansible/setup.md`, step 7, for setup and `docs/ansible/troubleshooting.md` for a yamllint/ansible-lint compatibility gotcha).
+```
+cumulus-lab/
+├── 01-single-server/
+│   ├── terraform/     # network, router, security group, server, floating IP
+│   └── ansible/       # webserver role (installs/configures nginx), inventory, scripts/
+├── 02-load-balanced/
+│   ├── terraform/     # network, security groups, ports, 2 backend servers + LB, floating IP
+│   └── ansible/       # webserver + loadbalancer roles, ssh.cfg (ProxyJump config)
+├── docs/
+│   ├── 01-single-server/   # manual-cli/, terraform/, ansible.md — walkthroughs + troubleshooting
+│   ├── 02-load-balanced/   # terraform/, ansible.md, troubleshooting.md — walkthroughs + troubleshooting
+│   └── general/            # wsl-setup.md, secrets-and-security.md, linting-and-tooling.md
+├── .pre-commit-config.yaml  # terraform fmt/validate, yamllint, ansible-lint hooks
+├── .yamllint / .ansible-lint
+└── .gitignore
+```
 
 ## Documentation
 
-- [docs/commands.md](docs/commands.md) — Phase 1, the full manual `openstack` command sequence, in order, with explanations
-- [docs/troubleshooting.md](docs/troubleshooting.md) — Phase 1, manual-CLI problems I ran into and how to fix them
-- [docs/terraform/structure.md](docs/terraform/structure.md) — Phase 2, a walkthrough of every `.tf` file and what it does
-- [docs/terraform/commands.md](docs/terraform/commands.md) — Phase 2, the Terraform workflow commands, in order
-- [docs/terraform/troubleshooting.md](docs/terraform/troubleshooting.md) — Phase 2, Terraform-specific problems I ran into and how to fix them
-- [docs/ansible/setup.md](docs/ansible/setup.md) — Phase 3, setting up the WSL2 control node and Ansible
-- [docs/ansible/troubleshooting.md](docs/ansible/troubleshooting.md) — Phase 3, WSL/Ansible-specific problems I ran into and how to fix them
+Start at [docs/README.md](docs/README.md) — the full documentation index, linking every doc file with a description of what's in it.
+
+Both exercises now have full Terraform + Ansible walkthrough docs, plus troubleshooting docs: [docs/01-single-server/](docs/01-single-server/) and [docs/02-load-balanced/](docs/02-load-balanced/).
+
+## Prerequisites
+
+To reproduce this project, you'll need:
+
+- WSL2 with an Ubuntu distro (see `docs/general/wsl-setup.md`)
+- Terraform and Ansible installed inside WSL (see `docs/general/wsl-setup.md`)
+- Access to Cumulus (an LNU-issued OpenStack project) and a downloaded `openrc` credentials file
+- For `02-load-balanced` specifically: your own public IP address, used in `terraform.tfvars` to restrict SSH access to the load balancer and backend servers (see the `variables.tf` comment in that exercise for the exact format)
+
+Full setup steps (installing the tools, structuring secrets, verifying connectivity) live in the `docs/` files linked above rather than being duplicated here.
+
+## Current Status
+
+Both exercises' Terraform configurations pass `terraform validate`. Cumulus lab instances are lab resources that get destroyed and recreated between sessions to free up quota, so whether either exercise's servers are actually up and reachable at any given moment depends on whether they've been applied recently, not on anything the code itself controls.
