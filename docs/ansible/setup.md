@@ -188,3 +188,23 @@ pre-commit run --all-files
 ```
 
 Running this for the first time against the existing `ansible/roles/webserver/` files surfaced a number of real findings, missing `---` document-start markers, files missing a trailing newline, non-FQCN module names (e.g. `apt` instead of `ansible.builtin.apt`), missing explicit `mode:` on template/copy tasks, handler naming/casing issues, and a variable-naming/role-prefix convention violation. These are being fixed by hand in the role files as a learning exercise rather than auto-fixed by tooling, so they're not resolved yet as of this write-up.
+
+## 8. Keep the inventory in sync with Terraform
+
+The instance's floating IP is not stable, it changes every time the instance is destroyed and recreated (`terraform apply` after a `terraform destroy`, or after certain resource replacements). `ansible/inventory.ini` had to be hand-edited after this happened once already, which is exactly the kind of manual step that's easy to forget and causes Ansible to fail against a stale IP.
+
+`scripts/update-inventory.sh` automates that step: it reads the current IP straight from `terraform output -raw server_public_ip` and overwrites `ansible/inventory.ini` with it.
+
+```bash
+./scripts/update-inventory.sh
+```
+
+Run this after every `terraform apply` and before running `ansible-playbook` (or the `ansible ... -m ping` check above). It can be run from any directory, it resolves its own paths relative to its own location rather than assuming a particular working directory.
+
+It does not source the OpenStack credentials itself, since that requires an interactive password prompt that a script can't answer on its own. If `~/.cumulus-secrets/project-openrc.sh` hasn't already been sourced in the current shell, `terraform output` fails and the script prints a one-line hint:
+
+```
+Tip: source ~/.cumulus-secrets/project-openrc.sh first
+```
+
+This is a deliberately small fix, not the final version. A proper OpenStack dynamic inventory plugin (querying the cloud API directly instead of going through Terraform's state) would remove the need for this script and for `inventory.ini` entirely, but that's a planned later optimization, not done yet.
