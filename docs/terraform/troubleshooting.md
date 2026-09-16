@@ -81,3 +81,13 @@ availability_zone = "nova"
 ```
 
 **Lesson:** don't assume a value carries over between resource types just because it worked elsewhere in the same stack. Compute AZs and storage AZs are different namespaces, and I should check each one directly with the CLI instead of assuming.
+
+## 5. `terraform init` fails with an HCL parse error after moving the project into WSL
+
+**Symptom:** after copying the project into the WSL Ubuntu filesystem (see `docs/ansible/setup.md`) and running `terraform init` fresh there, it failed with an HCL syntax error pointing at `volume.tf`.
+
+**Cause:** `volume.tf` had a stray orphaned value, a bare `234` sitting on its own line after the closing `}` of the last resource block, not inside any block at all. It was a leftover paste artifact from earlier editing, easy to miss on Windows because it just sat below everything else in the file and didn't visually break anything. HCL has no concept of a bare value floating outside a block, so the parser rejected the whole file the moment it tried to read it.
+
+**Fix:** delete the stray line so the file ends cleanly after the last resource block's closing `}`.
+
+**Lesson:** a parse error can come from something as small as one leftover character sitting outside any block. Worth scrolling to the very bottom of a `.tf` file after pasting edits into it.

@@ -4,13 +4,15 @@ Cumulus is Linnaeus University's (LNU) OpenStack-based private cloud (IaaS). I c
 
 ## What This Repo Covers
 
-This repo has two phases, both building the same SSH-accessible Ubuntu server on Cumulus, just with different tools.
+This repo has three phases, all building on the same SSH-accessible Ubuntu server on Cumulus, just with different tools.
 
 **Phase 1: Manual (openstack CLI).** I create the server by hand, one `openstack` command at a time, based on the LNU course slides (a 13-slide "Cumulus" lab presentation). This is the baseline, and it's still a valid reference if I want to understand what's happening under the hood.
 
 **Phase 2: Automated (Terraform).** I recreate the exact same infrastructure, network, router, security group, server, and floating IP, but through Terraform `.tf` files instead of manual commands. This is the LNU 2DV013 "Automated Provisioning" workshop. It's Infrastructure as Code: the same result, but defined declaratively and repeatable with `terraform apply` instead of retyping commands.
 
-Both phases also document real troubleshooting I hit along the way, since that's a gap the official course material doesn't cover.
+**Phase 3: Configuration (Ansible, from a WSL2 control node).** Ansible has no native Windows support, so this phase also moves the whole toolchain (Terraform included) onto a WSL2 Ubuntu control node. Once Terraform has provisioned the server, Ansible connects over SSH to configure it, instead of SSHing in by hand.
+
+All three phases also document real troubleshooting I hit along the way, since that's a gap the official course material doesn't cover.
 
 The goal is to give classmates a working reference that gets them from zero to a running, SSH-accessible Ubuntu server, manually or via Terraform, without hitting the same walls I did.
 
@@ -57,6 +59,19 @@ The `.tf` files themselves don't contain comments. All the explanations live in 
   ```
 - The same Cumulus `openrc` file as Phase 1. The OpenStack Terraform provider reads its credentials from the `OS_*` environment variables set by sourcing that file, not from anything written in the `.tf` files. Credentials never go into version control.
 
+## Phase 3: Configuration (Ansible + WSL2)
+
+From this phase onward, the toolchain runs from a WSL2 Ubuntu control node instead of Windows directly, since Ansible needs a Linux (or macOS, or WSL) control node. Terraform moved along with it, so both tools now run from the same WSL shell, against a copy of this project living in WSL's native filesystem rather than the `/mnt/c/...` Windows mount.
+
+- [docs/ansible/setup.md](docs/ansible/setup.md) — installing Terraform and Ansible in WSL, moving the project and secrets, and the Ansible inventory
+- [docs/ansible/troubleshooting.md](docs/ansible/troubleshooting.md) — WSL/Ansible-specific problems I ran into and how to fix them
+
+### Prerequisites
+
+- WSL2 with an Ubuntu distro installed
+- Terraform and Ansible installed inside WSL (see `docs/ansible/setup.md`, both come from their own official apt sources, not the default Ubuntu repos)
+- `mykey.pem` and the Cumulus `openrc` file, both moved out of the project directory entirely into `~/.cumulus-secrets/` (see `docs/ansible/setup.md`) so they can never be committed to git by accident
+
 ## Documentation
 
 - [docs/commands.md](docs/commands.md) — Phase 1, the full manual `openstack` command sequence, in order, with explanations
@@ -64,3 +79,5 @@ The `.tf` files themselves don't contain comments. All the explanations live in 
 - [docs/terraform/structure.md](docs/terraform/structure.md) — Phase 2, a walkthrough of every `.tf` file and what it does
 - [docs/terraform/commands.md](docs/terraform/commands.md) — Phase 2, the Terraform workflow commands, in order
 - [docs/terraform/troubleshooting.md](docs/terraform/troubleshooting.md) — Phase 2, Terraform-specific problems I ran into and how to fix them
+- [docs/ansible/setup.md](docs/ansible/setup.md) — Phase 3, setting up the WSL2 control node and Ansible
+- [docs/ansible/troubleshooting.md](docs/ansible/troubleshooting.md) — Phase 3, WSL/Ansible-specific problems I ran into and how to fix them
